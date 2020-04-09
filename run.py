@@ -2,6 +2,7 @@ import os
 import click
 import math
 from PIL import Image, ImageDraw, ImageFont
+from yaspin import yaspin, Spinner
 
 currrent_dir = (os.path.dirname(__file__)
                 if "__file__" in locals() else os.getcwd())
@@ -55,33 +56,33 @@ def main(fl, blank_line, trace, fn):
     
     file_name = os.path.basename(fl)
 
-    print('正在写入字帖...')
+    with yaspin(text="正在写入字帖..", color="yellow") as spinner:
+        # 分页写入
+        for index, txt_index in enumerate(range(0, len(text), max_char)):
+            # 写入米字格模板
+            out = Image.open(os.path.join(currrent_dir, "template.png"))
 
-    # 分页写入
-    for index, txt_index in enumerate(range(0, len(text), max_char)):
-        # 写入米字格模板
-        out = Image.open(os.path.join(currrent_dir, "template.png"))
+            draw = ImageDraw.Draw(out)
 
-        draw = ImageDraw.Draw(out)
+            for i, c in enumerate(text[txt_index:txt_index + max_char]):
+                # 计算x,y坐标
+                x = OFFSET_X + (i % 16) * WIDTH
+                y = OFFSET_Y + HEIGHT * (math.ceil((i + 1) / 16) - 1) * (2 if blank_line else 1)
 
-        for i, c in enumerate(text[txt_index:txt_index + max_char]):
-            # 计算x,y坐标
-            x = OFFSET_X + (i % 16) * WIDTH
-            y = OFFSET_Y + HEIGHT * (math.ceil((i + 1) / 16) - 1) * (2 if blank_line else 1)
+                draw.text((x, y), c, DARK, font)
 
-            draw.text((x, y), c, DARK, font)
+                # 如果启用空行跟描摹
+                if blank_line and trace:
+                    draw.text((x, y + HEIGHT), c, LIGHT, font)
 
-            # 如果启用空行跟描摹
-            if blank_line and trace:
-                draw.text((x, y + HEIGHT), c, LIGHT, font)
+            # 写入图片
+            draw = ImageDraw.Draw(out)
+            out_file_name = "%s_%s.png" % (file_name, index)
+            image_path = os.path.join(currrent_dir, "outputs", out_file_name)
+            out.save(image_path)
 
-        # 写入图片
-        draw = ImageDraw.Draw(out)
-        out_file_name = "%s_%s.png" % (file_name, index)
-        image_path = os.path.join(currrent_dir, "outputs", out_file_name)
-        out.save(image_path)
-
-    print('字帖生成完毕.')
+        spinner.text = "生成完毕!"
+        spinner.ok("✅ ")
 
 
 if __name__ == "__main__":
